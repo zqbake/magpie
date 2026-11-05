@@ -2763,7 +2763,7 @@ function paintInstalls() {
   const here = new Set((state?.agents || []).map((a) => a.id));
   // one listed above by its settings alone, its CLI gone (#843), is
   // offered again too
-  const items = installInfo.filter((x) => x.missing || !here.has(x.id));
+  const items = installInfo.filter((x) => x.missing || !here.has(x.id) || x.commands.some((c) => installErrors.has(x.id + ":" + c.via)));
   if (!items.length && !pluginAgents.length) { box?.remove(); return; }
   if (!box) {
     box = el("section", "ag-install");
@@ -2802,7 +2802,10 @@ function paintInstalls() {
       for (const c of x.commands) {
         const line = el("div", "ag-install-cmd");
         line.append(el("span", "ag-install-via", c.node ? t("Node.js + npm") : t(VIA[c.via] || c.via)), el("code", "", c.command), copyBtn(c.command, t("{agent}'s install command", { agent: x.name })));
+        if (c.runnable) line.append(installButton(x, c));
         cmds.append(line);
+        const why = installErrors.get(x.id + ":" + c.via);
+        if (why) cmds.append(el("p", "ag-install-error", why + " " + t("Copy the command to run it in a terminal.")));
       }
       r.append(who, cmds);
       parts.push(r);
@@ -2812,6 +2815,32 @@ function paintInstalls() {
   // sight with the commands folded (the owner: not folded away with them)
   if (pluginAgents.length) parts.push(pluginAgentsRow());
   box.replaceChildren(...parts);
+}
+
+let installTask = null;
+const installErrors = new Map();
+function installButton(x, c) {
+  const key = x.id + ":" + c.via;
+  const go = el("button", "text ag-install-run", t(installTask === key ? "Installing…" : "Install"));
+  go.type = "button";
+  go.disabled = !!installTask;
+  go.onclick = async () => {
+    if (installTask || !await confirmAction(t("Install {agent}?", { agent: x.name }), t("Runs as your current user and changes your global npm/Homebrew environment: {command}", { command: c.command }), t("Install")) || installTask) return;
+    installTask = key;
+    installErrors.delete(key);
+    paintInstalls();
+    try {
+      state = await api("agents/install/" + encodeURIComponent(x.id), { via: c.via });
+      renderAgents();
+      await Promise.all([loadInstalls(), loadCLIs()]);
+    } catch (err) {
+      installErrors.set(key, tNotice(err.message));
+    } finally {
+      installTask = null;
+      paintInstalls();
+    }
+  };
+  return go;
 }
 
 function pluginAgentsRow() {

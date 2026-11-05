@@ -179,6 +179,7 @@ var notYet = map[string]string{
 	"POST /api/agents/arrange":                   W,  // api.go
 	"POST /api/agents/here":                      A,  // api.go
 	"POST /api/agents/cli/{id}":                  A,  // api.go
+	"POST /api/agents/install/{id}":              A,  // api.go: confirmed package-manager install; terminal users run the catalog command
 	"POST /api/agents/disconnect-offline/{id}":   A,  // api.go
 	"POST /api/agents/rescan":                    A,  // api.go
 	"POST /api/agents/restart/{id}":              A,  // api.go

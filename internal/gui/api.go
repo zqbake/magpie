@@ -1180,6 +1180,22 @@ func Handler(w Windows, gw *gateway.Server) http.Handler {
 	mux.HandleFunc("GET /api/agents/install", func(rw http.ResponseWriter, r *http.Request) {
 		writeJSON(rw, agent.Installs())
 	})
+	mux.HandleFunc("POST /api/agents/install/{id}", func(rw http.ResponseWriter, r *http.Request) {
+		var in struct {
+			Via string `json:"via"`
+		}
+		decoder := json.NewDecoder(http.MaxBytesReader(rw, r.Body, 1024))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&in); err != nil {
+			fail(rw, err)
+			return
+		}
+		if err := agent.InstallCLI(r.Context(), r.PathValue("id"), in.Via); err != nil {
+			fail(rw, err)
+			return
+		}
+		writeJSON(rw, state())
+	})
 	// Aside's explicit offline model write. Normal model changes require its runtime.
 	mux.HandleFunc("POST /api/agents/stage/{id}", func(rw http.ResponseWriter, r *http.Request) {
 		a, err := agent.Find(r.PathValue("id"))

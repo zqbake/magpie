@@ -4,9 +4,9 @@ package agent
 // their vendors give to install them (#727): on a new computer the Agents
 // page said only "Install Claude Code, Codex, Gemini CLI, OpenCode…", and
 // which command installs each was left to be looked up. magpie shows the
-// commands to copy and run in a terminal; it doesn't run them itself, as an
-// install needs what a new machine may not have yet (Node.js for npm,
-// Homebrew), and a global npm prefix that may want sudo.
+// commands to copy and run in a terminal. A plain npm or Homebrew command
+// can also be run after confirmation when its prerequisites are here;
+// scripts, Node.js setup and administrator-only prefixes stay copy-only.
 //
 // Where no Node.js is found, each npm command installs it first (#727,
 // Sun1090: "curl xxx && npm xxxx"): nvm's installer and its LTS Node on a
@@ -39,6 +39,8 @@ type InstallCmd struct {
 	// Admin is npm's global folder, for an npm command run where only an
 	// administrator can change it (Windows' Program Files); "" otherwise
 	Admin string `json:"admin,omitempty"`
+	// Runnable says this package-manager command can run here as this user.
+	Runnable bool `json:"runnable,omitempty"`
 }
 
 // Install is an agent not on this machine, and how to install it.
@@ -198,6 +200,7 @@ func Installs() []Install {
 	if node && adminNPM {
 		npmNeedsAdmin(out, npmGlobalPrefix())
 	}
+	installChoices(out)
 	return out
 }
 
